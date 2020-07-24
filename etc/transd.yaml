@@ -17,3 +17,5 @@ general:
   transfer_pool: 1
   expiration_time: 86400
   pause: 1
+ssh:
+  BindAddress: 127.0.0.1

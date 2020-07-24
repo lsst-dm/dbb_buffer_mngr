@@ -81,6 +81,19 @@ class Porter(Command):
         self.size = chunk_size
         self.time = timeout
 
+        self.scp_opts = [
+            "-B",         # don't ask for passwords or passphrases
+            "-C",         # enable compression
+            "-p",         # preserve modification and access times
+            "-q",         # disable progress meter, diagnostic messages
+            f"-P {port}"  # set the port to connect to on the remote host
+        ]
+
+        self.ssh_opts = []
+        ssh_config = config.get("ssh", None)
+        if ssh_config is not None:
+            self.ssh_opts = [f"-o {k}={v}" for k, v in ssh_config.items()]
+
         self.todo = awaiting
         self.done = completed
 
@@ -88,6 +101,8 @@ class Porter(Command):
         """Transfer files to the endpoint site.
         """
         user, host, port, root = self.stage
+        scp_opts = " ".join(self.scp_opts)
+        ssh_opts = " ".join(self.ssh_opts)
         while not self.todo.empty():
             chunk = []
             for _ in range(self.size):
@@ -112,7 +127,8 @@ class Porter(Command):
 
                 # Create necessary subdirectory in the staging area on the
                 # endpoint site.
-                cmd = f"ssh -p {port} {user}@{host} mkdir -p {stage}"
+                cmd = f"ssh -p {port} {ssh_opts} {user}@{host} " \
+                      f"mkdir -p {stage}"
                 status, stdout, stderr = execute(cmd, timeout=self.time)
                 if status != 0:
                     msg = f"Command '{cmd}' failed with error: '{stderr}'"
@@ -121,7 +137,7 @@ class Porter(Command):
 
                 # Transfer files to the staging area.
                 sources = [os.path.join(src, fn) for fn in files]
-                cmd = f"scp -BCpq -P {port} " \
+                cmd = f"scp {scp_opts} {ssh_opts} " \
                       f"{' '.join(sources)} {user}@{host}:{stage}"
                 status, stdout, stderr = execute(cmd, timeout=self.time)
                 if status != 0:
@@ -131,7 +147,8 @@ class Porter(Command):
 
                 # Create necessary subdirectory in the the buffer on
                 # the endpoint site.
-                cmd = f"ssh -p {port} {user}@{host} mkdir -p {buffer}"
+                cmd = f"ssh -p {port} {ssh_opts} {user}@{host} " \
+                      f"mkdir -p {buffer}"
                 status, stdout, stderr = execute(cmd, timeout=self.time)
                 if status != 0:
                     msg = f"Command '{cmd}' failed with error: '{stderr}'"

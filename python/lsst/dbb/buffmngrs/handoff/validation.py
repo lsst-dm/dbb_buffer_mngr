@@ -88,6 +88,12 @@ SCHEMA = {
                     "minimum": 1
                 }
             }
+        },
+        "ssh": {
+            "type": "object",
+            "properties": {
+                "BindAddress": {"type": "string"}
+            }
         }
     },
     "required": ["handoff", "endpoint"]
